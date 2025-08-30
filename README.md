@@ -5,6 +5,8 @@
 
 Фронтенд-часть планировщика маршрутов для проекта **The Peakline** — платформы для энтузиастов активного отдыха. Этот инструмент создан для гибкого и удобного планирования походов, велосипедных поездок и других приключений.
 
+Статья на Хабр: https://habr.com/ru/articles/942406
+
 This is the frontend source code for the route planner, a core feature of **The Peakline** project, a platform for outdoor enthusiasts.
 
 ---
