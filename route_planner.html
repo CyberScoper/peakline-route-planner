@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ T.route_planner_page_title }} - Peakline</title>
+    
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- LeafletJS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <!-- ▼▼▼ CSS ДЛЯ ПЛАГИНА ГРУППИРОВКИ СЛОЕВ ▼▼▼ -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.css" />
+    
+    <!-- Route Planner CSS -->
+    <link rel="stylesheet" href="/static/css/route-planner.css?v=1.4">
+    <link rel="stylesheet" href="/static/css/home.css?v=1.3">
+    <style>
+        .page-header .container, .page-footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            width: 100%;
+        }
+        .page-header .header-container {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+        }
+    </style>
+</head>
+<body class="preload">
+    <header class="page-header">
+        <div class="container header-container">
+            <a href="/" class="logo">
+                <img src="/static/images/logo-peakline-icon.png" alt="Peakline Logo">
+                <span>Peakline</span>
+            </a>
+            <nav class="main-nav">
+                <!-- <a href="#features">Features</a> -->
+            </nav>
+            <div class="controls">
+                <div class="lang-switcher-dropdown">
+                    <button class="lang-switcher-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span>{{ lang | upper }}</span>
+                    </button>
+                    <div class="lang-switcher-menu">
+                        {% for code, name in T.available_languages.items() %}
+                            {% if code != lang %}
+                                <a href="?lang={{ code }}" class="lang-switcher-item">{{ name }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <button id="theme-toggle" class="control-btn" title="Toggle Theme">
+                    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+                 {% if user %}
+                 <a href="/dashboard" class="btn btn-primary header-cta">{{ T.login_button }}</a>
+                 {% else %}
+                 <a href="/login" class="btn btn-primary header-cta">{{ T.connect_strava_button | default("Connect Strava") }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="card">
+            <h1>Планировщик маршрутов</h1>
+            <div id="controls">
+                <!-- Группа: Название и основные действия -->
+                <div class="control-group name-group">
+                    <input type="text" id="routeName" placeholder="Название маршрута">
+                    <button id="saveRoute" class="primary-btn">💾 Сохранить</button>
+                    <button id="clearRoute" class="danger-btn">🗑️ Очистить</button>
+                    <button id="undoPoint" class="secondary-btn">↶ Отменить шаг</button>
+                </div>
+
+
+
+                <!-- Группа: Режимы маршрутизации -->
+                <div class="control-group routing-modes">
+                    <div class="control-section">
+                        <span class="section-label">Режим:</span>
+                        <div class="mode-buttons">
+                            <button class="mode-btn" data-mode="manual" title="Ручное создание маршрута">
+                                🎯 Ручной
+                            </button>
+                            <button class="mode-btn active" data-mode="hybrid" title="Гибридный режим (ручные точки + автоматические пути)">
+                                🔄 Гибридный
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-section" id="transportSection" style="display: none;">
+                        <span class="section-label">Транспорт:</span>
+                        <select id="routingProfile">
+                            <option value="driving">🚗 Автомобиль</option>
+                            <option value="cycling-mountain">🚵‍♂️ Горный велосипед</option>
+                            <option value="cycling-gravel">🚴‍♂️ Гравийный велосипед</option>
+                            <option value="cycling-regular">🚴‍♀️ Дорожный велосипед</option>
+                            <option value="walking">🚶‍♂️ Пеший</option>
+                        </select>
+                    </div>
+
+                    <div class="control-section" id="hybridControls" style="display: none;">
+                        <button id="calculateRoute" class="calculate-btn" title="Рассчитать автоматические пути между точками">
+                            📍 Рассчитать маршрут
+                        </button>
+                        <button id="clearAutoSegments" class="clear-auto-btn" title="Очистить автоматические сегменты">
+                            🗑️ Очистить авто
+                        </button>
+                        <button id="findLocation" class="location-btn" title="Найти мое местоположение">
+                            📍 GPS
+                        </button>
+                    </div>
+
+                    <!-- Настройки маршрутизации для велосипедистов -->
+                    <div class="control-section" id="cyclingSettings" style="display: none;">
+                        <span class="section-label">🚴‍♂️ Настройки:</span>
+                        <div class="cycling-options">
+                            <label class="option-checkbox">
+                                <input type="checkbox" id="avoidHighways" checked>
+                                <span>🚫 Избегать трасс</span>
+                            </label>
+                            <label class="option-checkbox">
+                                <input type="checkbox" id="preferTrails" checked>
+                                <span>🌲 Предпочитать тропы</span>
+                            </label>
+                            <label class="option-checkbox">
+                                <input type="checkbox" id="allowUnpaved">
+                                <span>🪨 Разрешить грунтовки</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Выбор движка маршрутизации -->
+                    <div class="control-section" id="routingEngineSection" style="display: none;">
+                        <span class="section-label">⚙️ Движок:</span>
+                        <select id="routingEngine">
+                            <option value="osrm">🚀 OSRM (быстрый)</option>
+                            <option value="osrm-trails">🌲 OSRM + тропы</option>
+                            <option value="ors">🗺️ OpenRouteService</option>
+                        </select>
+                    </div>
+
+                    <!-- Настройки API ключей -->
+                    <div class="control-section" id="apiKeysSection" style="display: none;">
+                        <span class="section-label">🔑 API ключи:</span>
+                        <div class="api-keys-container">
+                            <div class="api-key-input">
+                                <label for="thunderforestKey">Thunderforest:</label>
+                                <input type="password" id="thunderforestKey" placeholder="Ваш API ключ">
+                            </div>
+                            <div class="api-key-input">
+                                <label for="orsKey">OpenRouteService:</label>
+                                <input type="password" id="orsKey" placeholder="Ваш API ключ">
+                            </div>
+                            <button id="saveApiKeys" class="save-api-btn">💾 Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Группа: Информация и расчеты -->
+                <div class="control-group info-group">
+                    <span id="routeInfo"></span>
+                    <div class="route-calc">
+                        <input type="number" id="avgSpeed" value="25" min="1" max="100" title="Средняя скорость, км/ч">
+                        <span>км/ч</span>
+                        <span id="estimatedTime"></span>
+                    </div>
+                </div>
+            </div>
+            <div id="map"></div>
+
+            <!-- Leaflet Control Container will be created here -->
+
+            <!-- Routing Legend -->
+            <div class="routing-legend" id="routingLegend" style="display: none;">
+                <div class="routing-legend-item">
+                    <div class="routing-legend-line manual-route-line"></div>
+                    <span>Ручной маршрут</span>
+                </div>
+                <div class="routing-legend-item">
+                    <div class="routing-legend-line auto-route-line"></div>
+                    <span>Автоматический маршрут</span>
+                </div>
+            </div>
+
+            <!-- Mode Indicator -->
+            <div class="mode-indicator" id="modeIndicator"></div>
+
+            <!-- Loading Overlay -->
+            <div class="routing-loading-overlay" id="routingLoadingOverlay">
+                <div class="routing-loading-content">
+                    <div class="routing-loading-spinner"></div>
+                    <div>Расчет маршрута...</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+                        Используется OSRM API для расчета оптимального пути
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast Notifications Container -->
+            <div class="toast-container" id="toastContainer"></div>
+        </div>
+
+        <!-- Elevation Profile Panel -->
+        <div class="card elevation-panel" id="elevationPanel" style="display: none; margin-top: 20px;">
+            <div class="elevation-header">
+                <div class="elevation-title">
+                    <span class="elevation-icon">🏔️</span>
+                    <h3>Высотный профиль маршрута</h3>
+                </div>
+                <button id="closeElevationPanel" class="elevation-close-btn" title="Закрыть профиль">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div id="elevationChart" style="width: 100%; height: 300px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
+                Создайте маршрут для просмотра профиля
+            </div>
+            <div id="elevationStats" style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap;"></div>
+        </div>
+
+        <!-- Route Analysis Panel -->
+        <div class="card analysis-panel" id="analysisPanel" style="display: none; margin-top: 20px;">
+            <div class="analysis-header">
+                <div class="analysis-title">
+                    <span class="analysis-icon">🔍</span>
+                    <h3>Анализ маршрута</h3>
+                </div>
+                <button id="closeAnalysisPanel" class="analysis-close-btn" title="Закрыть анализ">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="analysisContent">
+                <div class="analysis-summary" id="analysisSummary"></div>
+                <div class="analysis-details" id="analysisDetails"></div>
+                <div class="analysis-recommendations" id="analysisRecommendations"></div>
+            </div>
+        </div>
+        
+        {% if user %}
+        <div class="card" style="margin-top: 30px;">
+            <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700;">Сохраненные маршруты</h2>
+            <div id="routesList">
+                <p id="loadingRoutes" style="color: var(--text-secondary);">Загрузка маршрутов...</p>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+    
+    <footer class="page-footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <a href="/" class="logo footer-logo">
+                    <img src="/static/images/logo-peakline-icon.png" alt="Peakline Logo">
+                    <span>Peakline</span>
+                </a>
+                <p class="copyright">© {{ current_year }} Peakline. {{ T.footer_rights | default("All rights reserved.") }}</p>
+            </div>
+            <nav class="footer-nav">
+                <a href="/about">{{ T.footer_about }}</a>
+                <a href="/privacy">{{ T.footer_privacy }}</a>
+                <a href="/support">{{ T.footer_contact }}</a>
+                <a href="/changelog">Updates</a>
+            </nav>
+            <div class="footer-right">
+                 <div class="footer-strava-logo">
+                    <a href="https://strava.com" target="_blank" rel="noopener noreferrer">
+                        <img src="/static/images/api_logo_pwrdBy_strava_horiz_orange.png" alt="Powered by Strava" class="logo-light">
+                        <img src="/static/images/api_logo_pwrdBy_strava_horiz_white.png" alt="Powered by Strava" class="logo-dark">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LeafletJS JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- SVG defs for gradient line -->
+    <svg width="0" height="0" style="position: absolute;">
+        <defs>
+            <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#22c55e" />
+                <stop offset="50%" stop-color="#f59e0b" />
+                <stop offset="100%" stop-color="#ef4444" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- ▼▼▼ JS ДЛЯ ПЛАГИНА ГРУППИРОВКИ СЛОЕВ ▼▼▼ -->
+    <script src="https://unpkg.com/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.js"></script>
+
+    <!-- Route Planner JavaScript Modules -->
+    <script src="/static/js/route-planner.js"></script>
+    <script src="/static/js/route-export.js"></script>
+    <script src="/static/js/route-manager.js"></script>
+    <script src="/static/js/route-planner-app.js"></script>
+    
+    <script>
+        // Немедленное применение темы для предотвращения "мигания"
+        if (localStorage.getItem("theme") === "dark" || 
+           (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && !localStorage.getItem("theme"))) {
+            document.documentElement.classList.add("dark");
+        }
+        
+        // Удаляем класс preload после загрузки страницы, чтобы включить анимации
+        window.addEventListener('load', () => {
+          document.body.classList.remove('preload');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Логика для шапки ---
+            const themeToggle = document.getElementById("theme-toggle");
+            if (themeToggle) {
+                themeToggle.addEventListener("click", () => {
+                    document.documentElement.classList.toggle("dark");
+                    const newTheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+                    localStorage.setItem("theme", newTheme);
+                });
+            }
+
+            const langSwitcher = document.querySelector('.lang-switcher-dropdown');
+            if (langSwitcher) {
+                const btn = langSwitcher.querySelector('.lang-switcher-btn');
+                btn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    langSwitcher.classList.toggle('active');
+                });
+                document.addEventListener('click', () => {
+                    if (langSwitcher.classList.contains('active')) {
+                        langSwitcher.classList.remove('active');
+                    }
+                });
+            }
+
+            // --- Логика для анимации при скролле ---
+            const scrollElements = document.querySelectorAll(".animate-on-scroll");
+            const elementInView = (el, dividend = 1) => {
+                const elementTop = el.getBoundingClientRect().top;
+                return (
+                    elementTop <= (window.innerHeight || document.documentElement.clientHeight) / dividend
+                );
+            };
+            const displayScrollElement = (element) => { element.classList.add("is-visible"); };
+            const handleScrollAnimation = () => {
+                scrollElements.forEach((el) => {
+                    if (elementInView(el, 1.1)) { displayScrollElement(el); }
+                });
+            }
+            // Вызываем один раз при загрузке и при каждом скролле
+            handleScrollAnimation();
+            window.addEventListener("scroll", handleScrollAnimation);
+
+            // --- Floating Panel Toggle ---
+            const floatingPanelToggle = document.getElementById('floatingPanelToggle');
+            const floatingControlPanel = document.getElementById('floatingControlPanel');
+
+            if (floatingPanelToggle && floatingControlPanel) {
+                floatingPanelToggle.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent event bubbling to map
+                    const isCollapsed = floatingControlPanel.classList.contains('collapsed');
+                    if (isCollapsed) {
+                        floatingControlPanel.classList.remove('collapsed');
+                        floatingPanelToggle.classList.remove('collapsed');
+                    } else {
+                        floatingControlPanel.classList.add('collapsed');
+                        floatingPanelToggle.classList.add('collapsed');
+                    }
+                });
+            }
+
+            // --- Create Floating Control Panel as Leaflet Control ---
+            // Wait for RoutePlanner to be initialized
+            let panelCreationAttempts = 0;
+            const maxAttempts = 10;
+
+            function tryCreatePanel() {
+                panelCreationAttempts++;
+
+                // Try to find RoutePlanner instance
+                if (window.routePlanner && window.routePlanner.map) {
+                    createFloatingControlPanel(window.routePlanner.map);
+                } else if (panelCreationAttempts < maxAttempts) {
+                    setTimeout(tryCreatePanel, 200);
+                } else {
+                    console.error('Could not find RoutePlanner instance after', maxAttempts, 'attempts');
+                }
+            }
+
+            // Start trying to create panel
+            setTimeout(tryCreatePanel, 500);
+
+            // Watch for theme changes and update styles
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'class') {
+                        const panel = document.getElementById('floatingControlPanel');
+                        if (panel) {
+                            applyThemeStyles(panel);
+                        }
+                    }
+                });
+            });
+
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            function bindButtonHandlers(container) {
+                console.log('Binding button handlers to floating panel...');
+
+                // Get RoutePlanner instance
+                const routePlanner = window.routePlanner;
+                const routeExporter = window.RouteExporter;
+
+                if (!routePlanner) {
+                    console.error('RoutePlanner not found for button binding');
+                    return;
+                }
+
+                // Bind action buttons
+                const closeRouteBtn = container.querySelector('#closeRoute');
+                if (closeRouteBtn) {
+                    closeRouteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routePlanner.closeRoute();
+                    });
+                    console.log('closeRoute button bound successfully');
+                }
+
+                const measureDistanceBtn = container.querySelector('#measureDistance');
+                if (measureDistanceBtn) {
+                    measureDistanceBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routePlanner.toggleMeasurementMode();
+                    });
+                    console.log('measureDistance button bound successfully');
+                }
+
+                // Bind analysis buttons
+                const elevationProfileBtn = container.querySelector('#elevationProfile');
+                if (elevationProfileBtn) {
+                    elevationProfileBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routePlanner.toggleElevationProfile();
+                    });
+                    console.log('elevationProfile button bound successfully');
+                }
+
+                const findPOIBtn = container.querySelector('#findPOI');
+                if (findPOIBtn) {
+                    findPOIBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routePlanner.findPOIAlongRoute();
+                    });
+                    console.log('findPOI button bound successfully');
+                }
+
+                const analyzeRouteBtn = container.querySelector('#analyzeRoute');
+                if (analyzeRouteBtn) {
+                    analyzeRouteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routePlanner.analyzeRouteSurface();
+                    });
+                    console.log('analyzeRoute button bound successfully');
+                }
+
+                // Bind export buttons
+                const exportGpxBtn = container.querySelector('#exportGpx');
+                if (exportGpxBtn && routeExporter) {
+                    exportGpxBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routeExporter.exportCurrentRouteAsGpx(routePlanner);
+                    });
+                    console.log('exportGpx button bound successfully');
+                }
+
+                const exportKmlBtn = container.querySelector('#exportKml');
+                if (exportKmlBtn && routeExporter) {
+                    exportKmlBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routeExporter.exportCurrentRouteAsKml(routePlanner);
+                    });
+                    console.log('exportKml button bound successfully');
+                }
+
+                const exportTcxBtn = container.querySelector('#exportTcx');
+                if (exportTcxBtn && routeExporter) {
+                    exportTcxBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        routeExporter.exportCurrentRouteAsTcx(routePlanner);
+                    });
+                    console.log('exportTcx button bound successfully');
+                }
+
+                console.log('All button handlers bound successfully');
+            }
+
+            function applyThemeStyles(container) {
+                // Panel no longer has section labels, so this function is simplified
+                // We can add any future theme-specific styling here if needed
+                console.log('Theme styles applied (no section labels to update)');
+            }
+
+            function createFloatingControlPanel(map) {
+                // Create custom Leaflet control
+                const FloatingControl = L.Control.extend({
+                    options: {
+                        position: 'bottomleft' // Position in bottom left corner
+                    },
+
+                    onAdd: function(map) {
+                        // Create container
+                        const container = L.DomUtil.create('div', 'floating-control-panel leaflet-control');
+                        container.id = 'floatingControlPanel';
+
+                        // Prevent map events from being triggered when clicking on the control
+                        L.DomEvent.disableClickPropagation(container);
+                        L.DomEvent.disableScrollPropagation(container);
+
+                        // Create panel content
+                        container.innerHTML = `
+                            <button class="floating-panel-toggle leaflet-control" id="floatingPanelToggle" title="Свернуть/Развернуть панель">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15,18 9,12 15,6"></polyline>
+                                </svg>
+                            </button>
+                            <div class="floating-panel-group">
+                                <div class="floating-buttons">
+                                    <button id="closeRoute" title="Замкнуть маршрут" class="floating-btn action-btn">
+                                        <span class="btn-icon">🔒</span>
+                                        <span class="btn-text">Замкнуть</span>
+                                    </button>
+                                    <button id="measureDistance" title="Линейка расстояния" class="floating-btn action-btn">
+                                        <span class="btn-icon">📏</span>
+                                        <span class="btn-text">Измерить</span>
+                                    </button>
+                                    <button id="elevationProfile" title="Высотный профиль" class="floating-btn tool-btn">
+                                        <span class="btn-icon">📈</span>
+                                        <span class="btn-text">Профиль</span>
+                                    </button>
+                                    <button id="findPOI" title="Найти точки интереса вдоль маршрута" class="floating-btn tool-btn">
+                                        <span class="btn-icon">🏪</span>
+                                        <span class="btn-text">POI</span>
+                                    </button>
+                                    <button id="analyzeRoute" title="Анализ поверхности и оптимизация" class="floating-btn tool-btn">
+                                        <span class="btn-icon">🔍</span>
+                                        <span class="btn-text">Анализ</span>
+                                    </button>
+                                    <button id="exportGpx" title="Экспорт в GPX" class="floating-btn export-btn">
+                                        <span class="btn-icon">📱</span>
+                                        <span class="btn-text">GPX</span>
+                                    </button>
+                                    <button id="exportKml" title="Экспорт в KML" class="floating-btn tool-btn">
+                                        <span class="btn-icon">🗺️</span>
+                                        <span class="btn-text">KML</span>
+                                    </button>
+                                    <button id="exportTcx" title="Экспорт в TCX" class="floating-btn tool-btn">
+                                        <span class="btn-icon">🏃‍♂️</span>
+                                        <span class="btn-text">TCX</span>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+
+                        // Add toggle functionality
+                        const toggleBtn = container.querySelector('#floatingPanelToggle');
+                        const buttonsContainer = container.querySelector('.floating-buttons');
+
+                        if (toggleBtn && buttonsContainer) {
+                            toggleBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const isCollapsed = container.classList.contains('collapsed');
+                                if (isCollapsed) {
+                                    container.classList.remove('collapsed');
+                                    toggleBtn.classList.remove('collapsed');
+                                    buttonsContainer.style.display = 'block';
+                                } else {
+                                    container.classList.add('collapsed');
+                                    toggleBtn.classList.add('collapsed');
+                                    buttonsContainer.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        // Bind button event handlers
+                        bindButtonHandlers(container);
+
+                        // Apply dark theme styles if needed
+                        applyThemeStyles(container);
+
+                        // Debug: Add visual indicator for testing
+                        console.log('Floating panel created with', container.querySelectorAll('.floating-section-label').length, 'section labels');
+
+                        // Force styles to apply
+                        container.style.display = 'block';
+                        container.style.visibility = 'visible';
+
+                        return container;
+                    }
+                });
+
+                // Add control to map
+                const floatingControl = new FloatingControl();
+                map.addControl(floatingControl);
+
+                console.log('Floating control panel created as Leaflet control');
+
+                // Debug: Check if all buttons exist
+                setTimeout(() => {
+                    const buttons = ['closeRoute', 'measureDistance', 'elevationProfile', 'findPOI', 'analyzeRoute', 'exportGpx', 'exportKml', 'exportTcx'];
+                    buttons.forEach(id => {
+                        const btn = document.getElementById(id);
+                        if (btn) {
+                            console.log(`Button ${id} found and ready`);
+                        } else {
+                            console.error(`Button ${id} not found!`);
+                        }
+                    });
+                }, 100);
+            }
+
+            // Panel is now managed by Leaflet Control system
+            console.log('Floating control panel initialization complete');
+        });
+    </script>
+</body>
+</html>
