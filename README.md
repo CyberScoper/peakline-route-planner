@@ -3,9 +3,9 @@
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](https://github.com/CyberScoper/peakline-route-planner/blob/main/LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Online-brightgreen.svg)](https://www.thepeakline.com/route-planner)
 
-Фронтенд-часть планировщика маршрутов для проекта **The Peakline** — платформы для энтузиастов активного отдыха. Этот инструмент создан для гибкого и удобного планирования походов, велосипедных поездок и других приключений.
+This is the frontend for the route planner, a core feature of **The Peakline** project—a platform for outdoor enthusiasts. This tool is designed for flexible and convenient planning of hikes, bike rides, and other adventures.
 
-Статья на Хабр: https://habr.com/ru/articles/942406
+Article on Habr: https://habr.com/ru/articles/942406
 
 This is the frontend source code for the route planner, a core feature of **The Peakline** project, a platform for outdoor enthusiasts.
 
@@ -15,41 +15,41 @@ This is the frontend source code for the route planner, a core feature of **The 
 
 ---
 
-## ✨ Основные возможности (Features)
+## ✨ Features
 
-*   **Три режима планирования:**
-    *   ✍️ **Ручной (Manual):** Точки соединяются прямыми линиями.
-    *   🚗 **Гибридный (Hybrid):** Автоматическая прокладка маршрута между точками.
-    *   📍 **GPS-трекинг:** Возможность следования по GPS (функционал в разработке).
-*   **Несколько движков маршрутизации:**
-    *   🚀 **OSRM:** Очень быстрый, идеален для дорог.
-    *   🌐 **OpenRouteService:** Поддерживает множество профилей (велосипед, хайкинг, и т.д.).
-*   **Разные типы транспорта:** От автомобиля до горного велосипеда с кастомными настройками.
-*   **Гибкие настройки маршрута:** Возможность избегать трасс, предпочитать тропы или разрешать грунтовки.
-*   **Экспорт в популярные форматы:**
-    *   💾 **GPX:** Стандарт для большинства GPS-навигаторов и приложений.
-    *   💾 **KML:** Для просмотра в Google Earth.
-    *   💾 **TCX:** Для устройств Garmin.
-*   **Инструменты анализа:** Профиль высот, измерение расстояний и другие утилиты.
+*   **Three planning modes:**
+    *   ✍️ **Manual:** Points are connected by straight lines.
+    *   🚗 **Hybrid:** Automatic routing between points.
+    *   📍 **GPS Tracking:** Ability to follow a GPS track (feature in development).
+*   **Multiple routing engines:**
+    *   🚀 **OSRM:** Very fast, ideal for roads.
+    *   🌐 **OpenRouteService:** Supports multiple profiles (cycling, hiking, etc.).
+*   **Multiple transport types:** From cars to mountain bikes with custom settings.
+*   **Flexible route settings:** Option to avoid highways, prefer trails, or allow unpaved roads.
+*   **Export to popular formats:**
+    *   💾 **GPX:** The standard for most GPS navigators and apps.
+    *   💾 **KML:** For viewing in Google Earth.
+    *   💾 **TCX:** For Garmin devices.
+*   **Analysis tools:** Elevation profile, distance measurement, and other utilities.
 
-## 💻 Технологический стек (Tech Stack)
+## 💻 Tech Stack
 
 *   **Frontend:** HTML5, CSS3, JavaScript (Vanilla JS)
-*   **Mapping Library:** [Leaflet.js](https://leafletjs.com/) — интерактивная и легкая библиотека карт.
+*   **Mapping Library:** [Leaflet.js](https://leafletjs.com/) — an interactive and lightweight map library.
 *   **Routing APIs:** OSRM, OpenRouteService.
 
 ---
 
-## 📜 **Важная информация о лицензии / Important License Information**
+## 📜 Important License Information
 
-Исходный код в этом репозитории опубликован **только для ознакомительных и образовательных целей**. Он демонстрирует мои навыки и архитектурные решения.
+The source code in this repository is published **for informational and educational purposes only**. It demonstrates my skills and architectural decisions.
 
-> **Вам ЗАПРЕЩЕНО:**
-> *   Копировать, изменять, распространять или переиспользовать этот код (или его части) в своих проектах (коммерческих или некоммерческих).
-> *   Создавать производные работы (форки) с целью разработки.
-> *   Продавать или сублицензировать данный код.
+> **You are PROHIBITED from:**
+> *   Copying, modifying, distributing, or reusing this code (or its parts) in your own projects (commercial or non-commercial).
+> *   Creating derivative works (forks) for development purposes.
+> *   Selling or sublicensing this code.
 >
-> Все права на данный код защищены. Подробности смотрите в файле `LICENSE.md`.
+> All rights to this code are reserved. For details, see the `LICENSE.md` file.
 
 ---
 
@@ -64,12 +64,12 @@ This is the frontend source code for the route planner, a core feature of **The 
 
 ---
 
-## 💬 Фидбэк и предложения (Feedback & Suggestions)
+## 💬 Feedback & Suggestions
 
-Несмотря на закрытую лицензию, я буду очень рад вашему фидбэку! Если вы попробовали **[живое демо](https://www.thepeakline.com/route-planner)** и у вас есть идеи по улучшению или вы нашли баг, пожалуйста, создайте **[Issue](https://github.com/CyberScoper/peakline-route-planner/issues)**.
+Despite the closed license, I would be very happy to receive your feedback! If you've tried the **[live demo](https://www.thepeakline.com/route-planner)** and have ideas for improvement or have found a bug, please create an **[Issue](https://github.com/CyberScoper/peakline-route-planner/issues)**.
 
-*Обратите внимание: Pull Request'ы с кодом приниматься не будут.*
+*Please note: Pull requests with code will not be accepted.*
 
-## 🌲 О проекте The Peakline
+## 🌲 About The Peakline Project
 
-Планировщик маршрутов — это лишь часть большого проекта **[The Peakline](https://www.thepeakline.com/)**. Заходите на сайт, чтобы узнать больше!
+The route planner is just one part of the larger **[The Peakline](https://www.thepeakline.com/)** project. Visit the website to learn more
